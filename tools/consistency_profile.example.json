@@ -1,0 +1,41 @@
+{
+  "voice": {
+    "speaker_id": "narrator_omega_cn_v1",
+    "pitch_range": [
+      -1.0,
+      1.0
+    ],
+    "speed_range": [
+      0.95,
+      1.05
+    ]
+  },
+  "character": {
+    "id": "anime_main_hero_v1",
+    "core_traits": [
+      "blue_hair",
+      "left_scar",
+      "silver_jacket"
+    ],
+    "forbidden_drifts": [
+      "different_hair_color",
+      "missing_scar"
+    ]
+  },
+  "scene": {
+    "style_anchor": "neo_tokyo_night",
+    "lighting": "cool_neon",
+    "palette": "blue_purple"
+  },
+  "object": {
+    "identity_tags": [
+      "hero_sword",
+      "engraving_omega"
+    ],
+    "material": "steel",
+    "size_band": [
+      "medium",
+      "medium_plus"
+    ]
+  }
+}

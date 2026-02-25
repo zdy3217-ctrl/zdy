@@ -1,0 +1,64 @@
+{
+  "frames": [
+    {
+      "voice": {
+        "speaker_id": "narrator_omega_cn_v1",
+        "pitch": 0.1,
+        "speed": 1.0
+      },
+      "character": {
+        "id": "anime_main_hero_v1",
+        "traits": [
+          "blue_hair",
+          "left_scar",
+          "silver_jacket"
+        ]
+      },
+      "scene": {
+        "style_anchor": "neo_tokyo_night",
+        "lighting": "cool_neon",
+        "palette": "blue_purple"
+      },
+      "object": [
+        {
+          "identity_tags": [
+            "hero_sword",
+            "engraving_omega"
+          ],
+          "material": "steel",
+          "size": "medium"
+        }
+      ]
+    },
+    {
+      "voice": {
+        "speaker_id": "narrator_omega_cn_v1",
+        "pitch": -0.1,
+        "speed": 1.0
+      },
+      "character": {
+        "id": "anime_main_hero_v1",
+        "traits": [
+          "blue_hair",
+          "left_scar",
+          "silver_jacket"
+        ]
+      },
+      "scene": {
+        "style_anchor": "neo_tokyo_night",
+        "lighting": "cool_neon",
+        "palette": "blue_purple"
+      },
+      "object": [
+        {
+          "identity_tags": [
+            "hero_sword",
+            "engraving_omega"
+          ],
+          "material": "steel",
+          "size": "medium_plus"
+        }
+      ]
+    }
+  ]
+}

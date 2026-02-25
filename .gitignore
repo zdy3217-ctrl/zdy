@@ -1,0 +1,5 @@
+# Audit artifacts
+reports/*.json
+
+# Python cache
+tools/__pycache__/
