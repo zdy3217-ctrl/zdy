@@ -1,0 +1,31 @@
+{
+  "frames": [
+    {
+      "voice": {
+        "speaker_id": "narrator_omega_cn_v2",
+        "pitch": 2.5,
+        "speed": 1.2
+      },
+      "character": {
+        "id": "anime_main_hero_v1",
+        "traits": [
+          "blue_hair"
+        ]
+      },
+      "scene": {
+        "style_anchor": "neo_tokyo_day",
+        "lighting": "warm",
+        "palette": "orange"
+      },
+      "object": [
+        {
+          "identity_tags": [
+            "hero_sword"
+          ],
+          "material": "wood",
+          "size": "small"
+        }
+      ]
+    }
+  ]
+}

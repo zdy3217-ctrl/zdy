@@ -29,7 +29,8 @@
 - `tools/quality_audit.py`：基础质量审计（完整性/环境）
 - `tools/consistency_audit.py`：一致性质检（语音/角色/场景/物品）
 - `tools/consistency_profile.example.json`：一致性配置模板
-- `tools/sample_timeline.consistent.json`：一致性样例输入
+- `tools/sample_timeline.consistent.json`：一致性正样本输入
+- `tools/sample_timeline.inconsistent.json`：一致性反样本输入（用于验证规则会拦截漂移）
 - `tools/verify.sh`：一键执行全部检查
 - `tools/launch.sh`：安全启动脚本
 
@@ -45,6 +46,10 @@ bash tools/verify.sh
 
 - `reports/quality_audit.json`
 - `reports/consistency_audit.json`
+
+`verify.sh` 会同时验证：
+- 正样本必须通过
+- 反样本必须失败（证明规则不是“摆设”）
 
 ---
 

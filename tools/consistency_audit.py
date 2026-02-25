@@ -30,7 +30,10 @@ class RuleResult:
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be object: {path}")
+    return data
 
 
 def _ok(name: str, details: str) -> RuleResult:
@@ -39,6 +42,10 @@ def _ok(name: str, details: str) -> RuleResult:
 
 def _fail(name: str, details: str) -> RuleResult:
     return RuleResult(name=name, status="fail", details=details)
+
+
+def _valid_range(value: Any) -> bool:
+    return isinstance(value, list) and len(value) == 2 and all(isinstance(i, (int, float)) for i in value) and value[0] <= value[1]
 
 
 def validate_profile(profile: dict[str, Any]) -> list[RuleResult]:
@@ -52,47 +59,38 @@ def validate_profile(profile: dict[str, Any]) -> list[RuleResult]:
         results.append(_ok("profile_sections", "all required sections exist"))
 
     voice = profile.get("voice", {})
-    if all(k in voice for k in ["speaker_id", "pitch_range", "speed_range"]):
-        results.append(_ok("voice_constraints", "voice constraints are defined"))
+    has_voice_keys = all(k in voice for k in ["speaker_id", "pitch_range", "speed_range"])
+    if has_voice_keys and isinstance(voice.get("speaker_id"), str) and _valid_range(voice.get("pitch_range")) and _valid_range(voice.get("speed_range")):
+        results.append(_ok("voice_constraints", "voice constraints are structurally valid"))
     else:
-        results.append(_fail("voice_constraints", "voice constraints missing keys"))
+        results.append(_fail("voice_constraints", "voice constraints missing keys or invalid ranges"))
 
     character = profile.get("character", {})
-    if all(k in character for k in ["id", "core_traits", "forbidden_drifts"]):
-        results.append(_ok("character_constraints", "character constraints are defined"))
+    has_char_keys = all(k in character for k in ["id", "core_traits", "forbidden_drifts"])
+    if has_char_keys and isinstance(character.get("id"), str) and isinstance(character.get("core_traits"), list) and isinstance(character.get("forbidden_drifts"), list):
+        results.append(_ok("character_constraints", "character constraints are structurally valid"))
     else:
-        results.append(_fail("character_constraints", "character constraints missing keys"))
+        results.append(_fail("character_constraints", "character constraints missing keys or invalid types"))
 
     scene = profile.get("scene", {})
-    if all(k in scene for k in ["style_anchor", "lighting", "palette"]):
-        results.append(_ok("scene_constraints", "scene constraints are defined"))
+    has_scene_keys = all(k in scene for k in ["style_anchor", "lighting", "palette"])
+    if has_scene_keys and all(isinstance(scene.get(k), str) for k in ["style_anchor", "lighting", "palette"]):
+        results.append(_ok("scene_constraints", "scene constraints are structurally valid"))
     else:
-        results.append(_fail("scene_constraints", "scene constraints missing keys"))
+        results.append(_fail("scene_constraints", "scene constraints missing keys or invalid types"))
 
     obj = profile.get("object", {})
-    if all(k in obj for k in ["identity_tags", "material", "size_band"]):
-        results.append(_ok("object_constraints", "object constraints are defined"))
+    has_obj_keys = all(k in obj for k in ["identity_tags", "material", "size_band"])
+    if has_obj_keys and isinstance(obj.get("identity_tags"), list) and isinstance(obj.get("material"), str) and isinstance(obj.get("size_band"), list):
+        results.append(_ok("object_constraints", "object constraints are structurally valid"))
     else:
-        results.append(_fail("object_constraints", "object constraints missing keys"))
+        results.append(_fail("object_constraints", "object constraints missing keys or invalid types"))
 
     return results
 
 
 def validate_dataset(dataset: dict[str, Any], profile: dict[str, Any]) -> list[RuleResult]:
-    """Validate generated timeline/script data against consistency profile.
-
-    Expected dataset schema:
-    {
-      "frames": [
-        {
-          "voice": {"speaker_id": "...", "pitch": 0.0, "speed": 1.0},
-          "character": {"id": "...", "traits": ["..."]},
-          "scene": {"style_anchor": "...", "lighting": "...", "palette": "..."},
-          "object": [{"identity_tags": ["..."], "material": "...", "size": "..."}]
-        }
-      ]
-    }
-    """
+    """Validate generated timeline/script data against consistency profile."""
     results: list[RuleResult] = []
     frames = dataset.get("frames", [])
     if not isinstance(frames, list) or not frames:
@@ -100,13 +98,25 @@ def validate_dataset(dataset: dict[str, Any], profile: dict[str, Any]) -> list[R
 
     # Voice consistency
     p_voice = profile["voice"]
+    pitch_min, pitch_max = p_voice["pitch_range"]
+    speed_min, speed_max = p_voice["speed_range"]
     for i, frame in enumerate(frames, start=1):
         voice = frame.get("voice", {})
         if voice.get("speaker_id") != p_voice.get("speaker_id"):
             results.append(_fail("voice_speaker_consistency", f"frame {i}: speaker_id drift"))
             break
+        pitch = voice.get("pitch")
+        speed = voice.get("speed")
+        if not isinstance(pitch, (int, float)) or not (pitch_min <= pitch <= pitch_max):
+            results.append(_fail("voice_pitch_consistency", f"frame {i}: pitch out of range"))
+            break
+        if not isinstance(speed, (int, float)) or not (speed_min <= speed <= speed_max):
+            results.append(_fail("voice_speed_consistency", f"frame {i}: speed out of range"))
+            break
     else:
         results.append(_ok("voice_speaker_consistency", "all frames keep same speaker_id"))
+        results.append(_ok("voice_pitch_consistency", "all frames pitch stays in configured range"))
+        results.append(_ok("voice_speed_consistency", "all frames speed stays in configured range"))
 
     # Character consistency
     p_char = profile["character"]
@@ -117,7 +127,11 @@ def validate_dataset(dataset: dict[str, Any], profile: dict[str, Any]) -> list[R
         if ch.get("id") != p_char.get("id"):
             results.append(_fail("character_id_consistency", f"frame {i}: character id drift"))
             break
-        traits = set(ch.get("traits", []))
+        traits_raw = ch.get("traits", [])
+        if not isinstance(traits_raw, list):
+            results.append(_fail("character_trait_consistency", f"frame {i}: traits must be list"))
+            break
+        traits = set(traits_raw)
         if not required_traits.issubset(traits):
             results.append(_fail("character_trait_consistency", f"frame {i}: missing core traits"))
             break
@@ -155,7 +169,14 @@ def validate_dataset(dataset: dict[str, Any], profile: dict[str, Any]) -> list[R
             results.append(_fail("object_presence_consistency", f"frame {i}: object missing"))
             break
         first = items[0]
-        tags = set(first.get("identity_tags", []))
+        if not isinstance(first, dict):
+            results.append(_fail("object_schema_consistency", f"frame {i}: object item must be dict"))
+            break
+        tags_raw = first.get("identity_tags", [])
+        if not isinstance(tags_raw, list):
+            results.append(_fail("object_schema_consistency", f"frame {i}: identity_tags must be list"))
+            break
+        tags = set(tags_raw)
         if not required_tags.issubset(tags):
             results.append(_fail("object_identity_consistency", f"frame {i}: identity tag drift"))
             break
@@ -167,6 +188,7 @@ def validate_dataset(dataset: dict[str, Any], profile: dict[str, Any]) -> list[R
             break
     else:
         results.append(_ok("object_presence_consistency", "object exists in all frames"))
+        results.append(_ok("object_schema_consistency", "object schema is valid in all frames"))
         results.append(_ok("object_identity_consistency", "object identity tags stable"))
         results.append(_ok("object_material_consistency", "object material stable"))
         results.append(_ok("object_size_consistency", "object size is in configured band"))
@@ -184,11 +206,14 @@ def main() -> int:
     profile = _load_json(args.profile)
     results = validate_profile(profile)
 
-    mode = "profile_only"
-    if args.input is not None:
-        dataset = _load_json(args.input)
-        results.extend(validate_dataset(dataset, profile))
-        mode = "profile_and_dataset"
+    if any(r.status == "fail" for r in results):
+        mode = "profile_invalid"
+    else:
+        mode = "profile_only"
+        if args.input is not None:
+            dataset = _load_json(args.input)
+            results.extend(validate_dataset(dataset, profile))
+            mode = "profile_and_dataset"
 
     passed = sum(1 for r in results if r.status == "pass")
     failed = sum(1 for r in results if r.status == "fail")
